@@ -23,4 +23,16 @@ function remove(id) {
   return destroy(`restaurants/${id}`)
 }
 
-export { getAll, getDetail, getRestaurantCategories, create, update, remove }
+function getAccumulatedCommission(id) {
+  return get(`restaurants/${id}/commission`)
+}
+
+export {
+  getAll,
+  getDetail,
+  getRestaurantCategories,
+  create,
+  update,
+  remove,
+  getAccumulatedCommission
+}

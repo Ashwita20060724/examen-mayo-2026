@@ -8,6 +8,7 @@ import {
   getRestaurantCategories,
   getDetail
 } from '../../api/RestaurantEndpoints'
+import { getAll as getCommissions } from '../../api/CommissionEndpoints'
 import InputItem from '../../components/InputItem'
 import TextRegular from '../../components/TextRegular'
 import * as GlobalStyles from '../../styles/GlobalStyles'
@@ -21,8 +22,10 @@ import { buildInitialValues } from '../Helper'
 import ImagePicker from '../../components/ImagePicker'
 
 export default function EditRestaurantScreen({ navigation, route }) {
-  const [open, setOpen] = useState(false)
+  const [openCategory, setOpenCategory] = useState(false)
+  const [openCommission, setOpenCommission] = useState(false)
   const [restaurantCategories, setRestaurantCategories] = useState([])
+  const [commissions, setCommissions] = useState([])
   const [backendErrors, setBackendErrors] = useState()
   const [restaurant, setRestaurant] = useState({})
 
@@ -37,7 +40,8 @@ export default function EditRestaurantScreen({ navigation, route }) {
     phone: null,
     restaurantCategoryId: null,
     logo: null,
-    heroImage: null
+    heroImage: null,
+    commissionId: null
   })
   const validationSchema = yup.object().shape({
     name: yup.string().max(255, 'Name too long').required('Name is required'),
@@ -60,7 +64,12 @@ export default function EditRestaurantScreen({ navigation, route }) {
       .number()
       .positive()
       .integer()
-      .required('Restaurant category is required')
+      .required('Restaurant category is required'),
+    commissionId: yup
+      .number()
+      .positive()
+      .integer()
+      .required('Commission is required')
   })
 
   useEffect(() => {
@@ -113,6 +122,29 @@ export default function EditRestaurantScreen({ navigation, route }) {
     fetchRestaurantCategories()
   }, [])
 
+  useEffect(() => {
+    async function fetchCommissions() {
+      try {
+        const fetchedCommissions = await getCommissions()
+        const fetchedCommissionsReshaped = fetchedCommissions.map(e => {
+          return {
+            label: `${e.name} (${e.percentage}%)`,
+            value: e.id
+          }
+        })
+        setCommissions(fetchedCommissionsReshaped)
+      } catch (error) {
+        showMessage({
+          message: `There was an error while retrieving commissions. ${error}`,
+          type: 'error',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      }
+    }
+    fetchCommissions()
+  }, [])
+
   const updateRestaurant = async values => {
     setBackendErrors([])
     try {
@@ -126,7 +158,16 @@ export default function EditRestaurantScreen({ navigation, route }) {
       navigation.navigate('RestaurantsScreen', { dirty: true })
     } catch (error) {
       console.log(error)
-      setBackendErrors(error.errors)
+      if (error.code && !error.errors) {
+        showMessage({
+          message: `There was an error while updating the restaurant. ${error}`,
+          type: 'error',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      } else {
+        setBackendErrors(error.errors)
+      }
     }
   }
 
@@ -141,6 +182,29 @@ export default function EditRestaurantScreen({ navigation, route }) {
         <ScrollView>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: '60%' }}>
+              <View style={styles.labelWrapper}>
+                <TextRegular>textStyle={styles.label}</TextRegular>
+              </View>
+
+              <DropDownPicker
+                open={openCommission}
+                value={values.commissionId}
+                items={commissions}
+                setOpen={setOpenCommission}
+                onSelectItem={item => {
+                  setFieldValue('commissionId', item.value)
+                }}
+                setItems={setCommissions}
+                placeholder="Select the commission"
+                containerStyle={{ height: 40, marginBottom: 10 }}
+                style={{ backgroundColor: GlobalStyles.brandBackground }}
+                dropDownStyle={{ backgroundColor: '#fafafa' }}
+              />
+              <ErrorMessage
+                name={'commissionId'}
+                render={msg => <TextError>{msg}</TextError>}
+              />
+
               <InputItem name="name" label="Name:" />
               <InputItem name="description" label="Description:" />
               <InputItem name="address" label="Address:" />
@@ -151,10 +215,10 @@ export default function EditRestaurantScreen({ navigation, route }) {
               <InputItem name="phone" label="Phone:" />
 
               <DropDownPicker
-                open={open}
+                open={openCategory}
                 value={values.restaurantCategoryId}
                 items={restaurantCategories}
-                setOpen={setOpen}
+                setOpen={setOpenCategory}
                 onSelectItem={item => {
                   setFieldValue('restaurantCategoryId', item.value)
                 }}
@@ -249,5 +313,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: 'center',
     marginTop: 5
+  },
+  labelWrapper: {
+    width: '100%',
+    textAlign: 'left',
+    paddingLeft: 13,
+    marginTop: 10,
+    marginBottom: 5
   }
 })

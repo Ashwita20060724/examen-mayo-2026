@@ -1,7 +1,11 @@
 import { useContext, useEffect, useState } from 'react'
 import { StyleSheet, FlatList, Pressable, View } from 'react-native'
 
-import { getAll, remove } from '../../api/RestaurantEndpoints'
+import {
+  getAll,
+  remove,
+  getAccumulatedCommission
+} from '../../api/RestaurantEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextSemiBold from '../../components/TextSemiBold'
 import TextRegular from '../../components/TextRegular'
@@ -50,6 +54,13 @@ export default function RestaurantsScreen({ navigation, route }) {
           Shipping:{' '}
           <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>
             {item.shippingCosts.toFixed(2)}€
+          </TextSemiBold>
+        </TextSemiBold>
+        <TextSemiBold>
+          Accumulated Commission:{' '}
+          <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>
+            {item.accumulatedComission?.toFixed(2) || '0.00'}€ {' ('}
+            {item.commission ? `${item.commission.percentage}%` : 'N/A)'}
           </TextSemiBold>
         </TextSemiBold>
         <View style={styles.actionButtonsContainer}>
@@ -181,6 +192,22 @@ export default function RestaurantsScreen({ navigation, route }) {
         titleStyle: GlobalStyles.flashTextStyle
       })
     }
+  }
+
+  const restaurantAccumulatedCommissions = async restaurant => {
+    //1. Llama a la API de cada restaurante
+    const acumulatedCommissions = await getAccumulatedCommission(restaurant.id)
+    //2.Creamos un nuevo campo que guarde las comisiones
+    restaurant.accumulatedComission = acumulatedCommissions.totalComission
+  }
+
+  const getRestaurantsWithAccumulatedCommissions = async () => {
+    const fetchedRestaurants = await getAll()
+    let restaurantsWithCommission = [...fetchedRestaurants] //copia la lista de restaurantes
+    for (const restaurant of restaurantsWithCommission) {
+      await restaurantAccumulatedCommissions(restaurant)
+    }
+    return restaurantsWithCommission
   }
 
   return (
