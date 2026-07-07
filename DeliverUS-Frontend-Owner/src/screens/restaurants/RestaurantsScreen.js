@@ -19,6 +19,7 @@ import { API_BASE_URL } from '@env'
 
 export default function RestaurantsScreen({ navigation, route }) {
   const [restaurants, setRestaurants] = useState([])
+  const [accumulatedCommissions, setAccumulatedCommissions] = useState({})
   const [restaurantToBeDeleted, setRestaurantToBeDeleted] = useState(null)
   const { loggedInUser } = useContext(AuthorizationContext)
 
@@ -161,6 +162,18 @@ export default function RestaurantsScreen({ navigation, route }) {
     try {
       const fetchedRestaurants = await getAll()
       setRestaurants(fetchedRestaurants)
+
+      //Comisión de cada restaurante
+      const comision = {}
+      for (const restaurant of fetchedRestaurants) {
+        try {
+          const result = await getAccumulatedCommission(restaurant.id)
+          comision[restaurant.id] = result.accumulatedComission
+        } catch (error) {
+          comision[restaurant.id] = null
+        }
+      }
+      setAccumulatedCommissions(comision)
     } catch (error) {
       showMessage({
         message: `There was an error while retrieving restaurants. ${error} `,
@@ -192,22 +205,6 @@ export default function RestaurantsScreen({ navigation, route }) {
         titleStyle: GlobalStyles.flashTextStyle
       })
     }
-  }
-
-  const restaurantAccumulatedCommissions = async restaurant => {
-    //1. Llama a la API de cada restaurante
-    const acumulatedCommissions = await getAccumulatedCommission(restaurant.id)
-    //2.Creamos un nuevo campo que guarde las comisiones
-    restaurant.accumulatedComission = acumulatedCommissions.totalComission
-  }
-
-  const getRestaurantsWithAccumulatedCommissions = async () => {
-    const fetchedRestaurants = await getAll()
-    let restaurantsWithCommission = [...fetchedRestaurants] //copia la lista de restaurantes
-    for (const restaurant of restaurantsWithCommission) {
-      await restaurantAccumulatedCommissions(restaurant)
-    }
-    return restaurantsWithCommission
   }
 
   return (
